@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit Quest 3D - Full Visuals Archipelago</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            background-color: #000;
+        }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        /* UI Overlay */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .hud-card {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            color: white;
+            pointer-events: auto;
+        }
+
+        /* Top Left: Player Stats */
+        #stats-panel {
+            width: 250px;
+        }
+
+        .stat-bar-container {
+            width: 100%;
+            background: #333;
+            height: 16px;
+            border-radius: 8px;
+            margin-top: 5px;
+            overflow: hidden;
+            border: 1px solid #555;
+        }
+
+        .stat-bar {
+            height: 100%;
+            width: 100%;
+            transition: width 0.2s ease;
+        }
+
+        #health-bar { background: linear-gradient(90deg, #ff416c, #ff4b2b); }
+        #energy-bar { background: linear-gradient(90deg, #11998e, #38ef7d); }
+        #exp-bar { background: linear-gradient(90deg, #f7b731, #ffa801); }
+
+        #equipped-fruit-container {
+            margin-top: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        /* Bottom Center: Action Bar */
+        #bottom-ui {
+            align-self: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        #hotbar {
+            display: flex;
+            gap: 8px;
+        }
+
+        .inventory-slot {
+            width: 50px;
+            height: 50px;
+            background: rgba(20, 20, 20, 0.85);
+            border: 2px solid #555;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .inventory-slot.active {
+            border-color: #ffd700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+            transform: scale(1.08);
+        }
+
+        .slot-key {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-size: 10px;
+            color: #aaa;
+        }
+
+        #action-bar {
+            display: flex;
+            gap: 8px;
+        }
+
+        .skill-slot {
+            width: 60px;
+            height: 60px;
+            background: rgba(20, 20, 20, 0.8);
+            border: 2px solid #ffd700;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .skill-key {
+            position: absolute;
+            top: 3px;
+            left: 5px;
+            font-size: 10px;
+            color: #aaa;
+        }
+
+        .skill-name {
+            font-size: 10px;
+            text-align: center;
+            padding: 2px;
+            line-height: 1.1;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid black;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        #interact-prompt {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px #000;
+            display: none;
+            pointer-events: none;
+        }
+
+        #instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            background: rgba(0,0,0,0.85);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #ffd700;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        #instructions h1 { margin-top: 0; color: #ffd700; }
+        #instructions p { margin: 6px 0; }
+        
+        .damage-text {
+            position: absolute;
+            color: #ff3333;
+            font-weight: bold;
+            font-size: 20px;
+            font-family: sans-serif;
+            pointer-events: none;
+            animation: floatUp 0.8s forwards;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        .player-damage {
+            color: #ffaa00 !important;
+        }
+
+        #spinner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 10, 15, 0.95);
+            border: 3px solid #ffd700;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            color: white;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.4);
+            pointer-events: auto;
+        }
+
+        #spinner-box {
+            width: 280px;
+            height: 100px;
+            background: #111;
+            border: 2px solid #444;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: bold;
+            margin: 15px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.3); }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="game-container"></div>
+    <div id="crosshair"></div>
+    <div id="interact-prompt">[E] Spin Fruit ($100)</div>
+
+    <div id="ui-layer">
+        <div id="stats-panel" class="hud-card">
+            <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                <span id="player-name">Pirate Lv. 1</span>
+                <span id="player-bounty" style="color:#ffd700;">$200</span>
+            </div>
+            
+            <div style="margin-top: 8px; font-size: 12px;">Health</div>
+            <div class="stat-bar-container">
+                <div id="health-bar" class="stat-bar"></div>
+            </div>
+
+            <div style="margin-top: 5px; font-size: 12px;">Energy</div>
+            <div class="stat-bar-container">
+                <div id="energy-bar" class="stat-bar"></div>
+            </div>
+
+            <div style="margin-top: 5px; font-size: 12px;">EXP</div>
+            <div class="stat-bar-container">
+                <div id="exp-bar" class="stat-bar" style="width: 0%;"></div>
+            </div>
+            
+            <div id="equipped-fruit-container">
+                Fruit: <span id="current-fruit-name" style="color: #aaa;">None</span>
+            </div>
+
+            <div style="margin-top: 5px; font-size: 12px; color: #aaa;">
+                Location: <span id="current-zone-name" style="color: #38ef7d; font-weight:bold;">Windmill Village</span>
+            </div>
+        </div>
+
+        <div id="bottom-ui">
+            <div id="hotbar">
+                <div id="slot-1" class="inventory-slot active">
+                    <span class="slot-key">1</span>
+                    <span>Combat</span>
+                </div>
+                <div id="slot-2" class="inventory-slot">
+                    <span class="slot-key">2</span>
+                    <span id="slot-fruit-text">Fruit</span>
+                </div>
+            </div>
+
+            <div id="action-bar">
+                <div class="skill-slot">
+                    <span class="skill-key">M1</span>
+                    <span id="skill-m1" class="skill-name">Punch</span>
+                </div>
+                <div class="skill-slot">
+                    <span class="skill-key">Q</span>
+                    <span id="skill-q" class="skill-name">Dash</span>
+                </div>
+                <div class="skill-slot">
+                    <span class="skill-key">Z</span>
+                    <span id="skill-z" class="skill-name">Tackle</span>
+                </div>
+                <div class="skill-slot">
+                    <span class="skill-key">X</span>
+                    <span id="skill-x" class="skill-name">Smash</span>
+                </div>
+                <div class="skill-slot">
+                    <span class="skill-key">C</span>
+                    <span id="skill-c" class="skill-name">-</span>
+                </div>
+                <div class="skill-slot">
+                    <span class="skill-key">V</span>
+                    <span id="skill-v" class="skill-name">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="spinner-overlay">
+        <h2 style="margin: 0; color: #ffd700;">BLOX FRUIT DEALER</h2>
+        <p style="margin: 5px 0 0 0; color: #aaa; font-size: 13px;">Cost: $100</p>
+        <div id="spinner-box">Press Roll!</div>
+        <button id="spin-btn" style="padding: 10px 25px; background: #ffd700; border: none; font-weight: bold; border-radius: 5px; cursor: pointer;">SPIN FRUIT</button>
+    </div>
+
+    <div id="instructions">
+        <h1>FRUIT QUEST ARCHIPELAGO</h1>
+        <p><strong>Click to Play</strong></p>
+        <br>
+        <p>Full Visual Effects Enabled!</p>
+        <p><strong>1</strong> - Combat | <strong>2</strong> - Fruit</p>
+        <p><strong>WASD</strong> - Move | <strong>SPACE</strong> - Jump | <strong>Q</strong> - Dash</p>
+        <p><strong>M1</strong> - Attack | <strong>Z / X / C / V</strong> - Special Skills</p>
+    </div>
+
+    <script>
+        // --- GAME ENGINE SETUP ---
+        const container = document.getElementById('game-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x68c3ff);
+        scene.fog = new THREE.FogExp2(0x68c3ff, 0.003);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // --- LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xfffaed, 0.9);
+        sunLight.position.set(200, 300, 100);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 1000;
+        const d = 300;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        scene.add(sunLight);
+
+        // --- GAME STATE ---
+        const playerState = {
+            level: 1,
+            exp: 0,
+            maxExp: 100,
+            hp: 100,
+            maxHp: 100,
+            energy: 100,
+            maxEnergy: 100,
+            bounty: 200,
+            activeSlot: 1,
+            equippedFruit: null,
+            cdQ: false,
+            cdZ: false,
+            cdX: false,
+            cdC: false,
+            cdV: false,
+            punchSide: false,
+            isDashing: false,
+            isSmashing: false,
+            velocityY: 0,
+            isGrounded: true,
+            moveSpeedBonus: 1
+        };
+
+        const GRAVITY = -35;
+        const JUMP_FORCE = 15;
+
+        // --- ISLAND DATA ---
+        const ISLANDS = [
+            { name: "Windmill Village", x: 0, z: 0, radius: 80, height: 9, color: 0x4a7c2e },
+            { name: "Desert Island", x: 250, z: 0, radius: 75, height: 9, color: 0xd2b48c },
+            { name: "Jungle Island", x: 0, z: -250, radius: 85, height: 9, color: 0x1e561e },
+            { name: "Frost Island", x: -250, z: 0, radius: 75, height: 9, color: 0xe0f7fa }
+        ];
+
+        function getFloorHeight(x, z) {
+            for (let isl of ISLANDS) {
+                if (Math.hypot(x - isl.x, z - isl.z) < isl.radius) {
+                    return isl.height;
+                }
+            }
+            return -20;
+        }
+
+        function getCurrentZoneName(x, z) {
+            for (let isl of ISLANDS) {
+                if (Math.hypot(x - isl.x, z - isl.z) < isl.radius + 10) {
+                    return isl.name;
+                }
+            }
+            return "The Open Sea";
+        }
+
+        // --- OCEAN & MAP BUILD ---
+        const water = new THREE.Mesh(new THREE.PlaneGeometry(2500, 2500), new THREE.MeshStandardMaterial({ color: 0x0077be, roughness: 0.1, metalness: 0.2 }));
+        water.rotation.x = -Math.PI / 2;
+        water.position.y = -1;
+        scene.add(water);
+
+        ISLANDS.forEach(isl => {
+            const islandMesh = new THREE.Mesh(new THREE.CylinderGeometry(isl.radius - 5, isl.radius + 10, 10, 32), new THREE.MeshStandardMaterial({ color: isl.color, roughness: 0.8 }));
+            islandMesh.position.set(isl.x, 4, isl.z);
+            islandMesh.receiveShadow = true;
+            scene.add(islandMesh);
+        });
+
+        // --- WINDMILL & LANDMARKS ---
+        const windmillGroup = new THREE.Group();
+        const tower = new THREE.Mesh(new THREE.CylinderGeometry(4, 7, 22, 16), new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.7 }));
+        tower.position.y = 11;
+        windmillGroup.add(tower);
+
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(5.5, 6, 16), new THREE.MeshStandardMaterial({ color: 0x8b0000 }));
+        roof.position.y = 24;
+        windmillGroup.add(roof);
+
+        const rotorGroup = new THREE.Group();
+        rotorGroup.position.set(0, 19, 4.2);
+        rotorGroup.add(new THREE.Mesh(new THREE.SphereGeometry(1.2, 12, 12), new THREE.MeshStandardMaterial({ color: 0x5c4033 })));
+
+        const bladeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+        for (let i = 0; i < 4; i++) {
+            const bladePivot = new THREE.Group();
+            bladePivot.rotation.z = (i * Math.PI / 2);
+            const bladeMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 14), bladeMat);
+            bladeMesh.position.y = 7;
+            bladePivot.add(bladeMesh);
+            rotorGroup.add(bladePivot);
+        }
+        windmillGroup.add(rotorGroup);
+        windmillGroup.position.set(0, 9, -20);
+        scene.add(windmillGroup);
+
+        // --- CHARACTER BUILDER ---
+        function createDetailedCharacter(config) {
+            const rootGroup = new THREE.Group();
+            const skinMat = new THREE.MeshStandardMaterial({ color: config.skinColor, roughness: 0.6 });
+            const shirtMat = new THREE.MeshStandardMaterial({ color: config.shirtColor, roughness: 0.5 });
+            const pantsMat = new THREE.MeshStandardMaterial({ color: config.pantsColor, roughness: 0.5 });
+            const detailMat = new THREE.MeshStandardMaterial({ color: config.detailColor, roughness: 0.4 });
+            const hairMat = new THREE.MeshStandardMaterial({ color: config.hairColor, roughness: 0.6 });
+
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.32, 1.1, 16), shirtMat);
+            torso.position.y = 1.35;
+            rootGroup.add(torso);
+
+            const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.15, 16), detailMat);
+            belt.position.y = -0.4;
+            torso.add(belt);
+
+            const headGroup = new THREE.Group();
+            headGroup.position.y = 0.85;
+
+            const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), skinMat);
+            headMesh.scale.set(1, 1.1, 1);
+            headGroup.add(headMesh);
+
+            if (config.isEnemy) {
+                const bandana = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.33, 0.2, 16), detailMat);
+                bandana.position.y = 0.18;
+                headGroup.add(bandana);
+            } else {
+                const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.335, 16, 16), hairMat);
+                hairCap.position.set(0, 0.05, 0.02);
+                headGroup.add(hairCap);
+            }
+
+            torso.add(headGroup);
+
+            function createArm(isLeft) {
+                const pivot = new THREE.Group();
+                pivot.position.set(isLeft ? -0.48 : 0.48, 0.45, 0);
+
+                const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.55, 12), shirtMat);
+                upperArm.position.y = -0.27;
+                pivot.add(upperArm);
+
+                const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.5, 12), skinMat);
+                forearm.position.y = -0.72;
+                pivot.add(forearm);
+
+                return pivot;
+            }
+
+            const leftArm = createArm(true);
+            const rightArm = createArm(false);
+            torso.add(leftArm);
+            torso.add(rightArm);
+
+            return {
+                root: rootGroup,
+                torso: torso,
+                leftArm: leftArm,
+                rightArm: rightArm,
+                punchProgress: 0,
+                punchingArm: null
+            };
+        }
+
+        const playerCharacter = createDetailedCharacter({
+            skinColor: 0xffdbac, shirtColor: 0xdd2222, pantsColor: 0x222233, detailColor: 0xffd700, hairColor: 0x2b1a09, isEnemy: false
+        });
+        const playerGroup = playerCharacter.root;
+        playerGroup.position.set(0, 9, 30);
+        scene.add(playerGroup);
+
+        // --- BLOX FRUITS DEFINITIONS ---
+        const FRUITS = [
+            { name: "Bomb Fruit", rarity: "Common", color: 0x333333, chance: 40 },
+            { name: "Ice Fruit", rarity: "Uncommon", color: 0x00d5ff, chance: 30 },
+            { name: "Flame Fruit", rarity: "Rare", color: 0xff4400, chance: 20 },
+            { name: "Dark Fruit", rarity: "Legendary", color: 0x6600cc, chance: 8 },
+            { name: "Dragon Fruit", rarity: "Mythic", color: 0xff1100, chance: 2 }
+        ];
+
+        const worldFruits = [];
+
+        function spawnFruitMesh(fruit, position) {
+            const fruitGroup = new THREE.Group();
+            const mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6, 1), new THREE.MeshStandardMaterial({ color: fruit.color, roughness: 0.3 }));
+            fruitGroup.add(mesh);
+
+            const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.4), new THREE.MeshBasicMaterial({ color: 0x442211 }));
+            stem.position.y = 0.6;
+            fruitGroup.add(stem);
+
+            const auraLight = new THREE.PointLight(fruit.color, 1.5, 5);
+            auraLight.position.y = 0.5;
+            fruitGroup.add(auraLight);
+
+            fruitGroup.position.copy(position);
+            scene.add(fruitGroup);
+
+            worldFruits.push({ mesh: fruitGroup, fruit: fruit });
+        }
+
+        // --- BLOX FRUIT DEALER ---
+        const dealerGroup = new THREE.Group();
+        const dealerChar = createDetailedCharacter({ skinColor: 0x8d5524, shirtColor: 0x228b22, pantsColor: 0x111111, detailColor: 0xffd700, hairColor: 0x000000, isEnemy: true });
+        dealerGroup.add(dealerChar.root);
+
+        const ring = new THREE.Mesh(new THREE.RingGeometry(2, 2.3, 16), new THREE.MeshBasicMaterial({ color: 0x38ef7d, wireframe: true }));
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = 0.05;
+        dealerGroup.add(ring);
+        dealerGroup.position.set(0, 9, 10);
+        scene.add(dealerGroup);
+
+        // --- ENEMIES ---
+        const enemies = [];
+        function createBandit(x, z, shirtCol, hpVal = 350) {
+            const char = createDetailedCharacter({ skinColor: 0xd2b48c, shirtColor: shirtCol, pantsColor: 0x444444, detailColor: 0xaa2222, hairColor: 0x111111, isEnemy: true });
+            char.root.position.set(x, getFloorHeight(x, z), z);
+            scene.add(char.root);
+
+            return { character: char, mesh: char.root, hp: hpVal, maxHp: hpVal, spawnX: x, spawnZ: z, lastAttack: 0 };
+        }
+
+        enemies.push(createBandit(-10, 10, 0x1f4e78));
+        enemies.push(createBandit(15, 5, 0x1f4e78));
+        enemies.push(createBandit(230, 10, 0xb8860b, 400));
+        enemies.push(createBandit(-15, -240, 0x006400, 450));
+        enemies.push(createBandit(-240, 15, 0x4682b4, 500));
+
+        // --- INPUTS & CAMERA ---
+        let isLocked = false;
+        const keys = {};
+        let yaw = 0, pitch = 0;
+
+        const instructions = document.getElementById('instructions');
+        const interactPrompt = document.getElementById('interact-prompt');
+        const spinnerOverlay = document.getElementById('spinner-overlay');
+        const spinBtn = document.getElementById('spin-btn');
+        const spinnerBox = document.getElementById('spinner-box');
+
+        instructions.addEventListener('click', () => { document.body.requestPointerLock(); });
+
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === document.body) {
+                isLocked = true;
+                instructions.style.display = 'none';
+            } else {
+                isLocked = false;
+                if (spinnerOverlay.style.display !== 'flex') instructions.style.display = 'block';
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (!isLocked) return;
+            if (e.code === 'Digit1') switchSlot(1);
+            if (e.code === 'Digit2') switchSlot(2);
+            if (e.code === 'KeyQ') castDash();
+            if (e.code === 'KeyZ') castZMove();
+            if (e.code === 'KeyX') castXMove();
+            if (e.code === 'KeyC') castCMove();
+            if (e.code === 'KeyV') castVMove();
+            if (e.code === 'Space') playerJump();
+            if (e.code === 'KeyE') checkInteraction();
+        });
+
+        document.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isLocked) return;
+            yaw -= e.movementX * 0.002;
+            pitch -= e.movementY * 0.002;
+            pitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 4, pitch));
+        });
+
+        document.addEventListener('mousedown', (e) => { if (isLocked && e.button === 0) basicAttack(); });
+
+        function switchSlot(slotNum) {
+            playerState.activeSlot = slotNum;
+            document.getElementById('slot-1').classList.toggle('active', slotNum === 1);
+            document.getElementById('slot-2').classList.toggle('active', slotNum === 2);
+
+            const m1Text = document.getElementById('skill-m1');
+            const qText = document.getElementById('skill-q');
+            const zText = document.getElementById('skill-z');
+            const xText = document.getElementById('skill-x');
+            const cText = document.getElementById('skill-c');
+            const vText = document.getElementById('skill-v');
+
+            if (slotNum === 1) {
+                m1Text.innerText = "Punch";
+                qText.innerText = "Dash";
+                zText.innerText = "Quick Tackle";
+                xText.innerText = "Ground Smash";
+                cText.innerText = "-";
+                vText.innerText = "-";
+            } else if (playerState.equippedFruit) {
+                if (playerState.equippedFruit.name === "Bomb Fruit") {
+                    m1Text.innerText = "Explosive Shot";
+                    qText.innerText = "Dash";
+                    zText.innerText = "Targeted Bomb";
+                    xText.innerText = "Explosive Leap";
+                    cText.innerText = "Land Mines";
+                    vText.innerText = "Self Destruct";
+                }
+            }
+        }
+
+        function checkInteraction() {
+            if (playerGroup.position.distanceTo(dealerGroup.position) < 4) {
+                document.exitPointerLock();
+                spinnerOverlay.style.display = 'flex';
+            }
+        }
+
+        spinBtn.addEventListener('click', () => {
+            if (playerState.bounty < 100) return;
+            playerState.bounty -= 100;
+            updateUI();
+            spinBtn.disabled = true;
+
+            let ticks = 0;
+            const spinInterval = setInterval(() => {
+                ticks++;
+                const randomFruit = FRUITS[Math.floor(Math.random() * FRUITS.length)];
+                spinnerBox.innerText = randomFruit.name;
+
+                if (ticks > 20) {
+                    clearInterval(spinInterval);
+                    const rolledFruit = rollFruit();
+                    spinnerBox.innerText = `${rolledFruit.name}!`;
+
+                    const dropPos = playerGroup.position.clone().add(new THREE.Vector3(0, 0, -2).applyAxisAngle(new THREE.Vector3(0,1,0), yaw));
+                    spawnFruitMesh(rolledFruit, dropPos);
+
+                    setTimeout(() => {
+                        spinnerOverlay.style.display = 'none';
+                        spinBtn.disabled = false;
+                        document.body.requestPointerLock();
+                    }, 1200);
+                }
+            }, 80);
+        });
+
+        function rollFruit() {
+            const rand = Math.random() * 100;
+            let cumulative = 0;
+            for (let f of FRUITS) {
+                cumulative += f.chance;
+                if (rand <= cumulative) return f;
+            }
+            return FRUITS[0];
+        }
+
+        function equipFruit(fruit) {
+            playerState.equippedFruit = fruit;
+            document.getElementById('current-fruit-name').innerText = `${fruit.name} (${fruit.rarity})`;
+            document.getElementById('slot-fruit-text').innerText = fruit.name;
+            updateUI();
+        }
+
+        function playerJump() {
+            if (playerState.isGrounded) {
+                playerState.velocityY = JUMP_FORCE;
+                playerState.isGrounded = false;
+            }
+        }
+
+        function createDamageText(text, position, isPlayerDamage = false) {
+            const div = document.createElement('div');
+            div.className = `damage-text ${isPlayerDamage ? 'player-damage' : ''}`;
+            div.innerText = text;
+            
+            const vector = position.clone().add(new THREE.Vector3(0, 2, 0));
+            vector.project(camera);
+
+            div.style.left = `${(vector.x * .5 + .5) * window.innerWidth}px`;
+            div.style.top = `${(-(vector.y * .5) + .5) * window.innerHeight}px`;
+            document.body.appendChild(div);
+
+            setTimeout(() => div.remove(), 800);
+        }
+
+        // FULL EXPANDING EXPLOSION VISUAL EFFECT
+        function createExplosionEffect(position, radius, color = 0xff4400) {
+            const expMesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 16, 16), new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.9 }));
+            expMesh.position.copy(position);
+            scene.add(expMesh);
+
+            const ringMesh = new THREE.Mesh(new THREE.RingGeometry(0.5, radius * 1.5, 32), new THREE.MeshBasicMaterial({ color: 0xffa500, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }));
+            ringMesh.rotation.x = -Math.PI / 2;
+            ringMesh.position.copy(position).add(new THREE.Vector3(0, 0.1, 0));
+            scene.add(ringMesh);
+
+            let time = 0;
+            const anim = setInterval(() => {
+                time += 0.1;
+                expMesh.scale.addScalar(0.12);
+                ringMesh.scale.addScalar(0.15);
+                expMesh.material.opacity -= 0.1;
+                ringMesh.material.opacity -= 0.1;
+
+                if (expMesh.material.opacity <= 0) {
+                    clearInterval(anim);
+                    scene.remove(expMesh);
+                    scene.remove(ringMesh);
+                }
+            }, 25);
+        }
+
+        // FULL VISUAL SLASH & PROJECTILE M1
+        function basicAttack() {
+            playerGroup.rotation.y = yaw;
+            playerState.punchSide = !playerState.punchSide;
+            playerCharacter.punchingArm = playerState.punchSide ? playerCharacter.rightArm : playerCharacter.leftArm;
+            playerCharacter.punchProgress = 1.0;
+
+            const isFruitMode = (playerState.activeSlot === 2 && playerState.equippedFruit);
+
+            // BOMB M1: VISUAL PROJECTILE
+            if (isFruitMode && playerState.equippedFruit.name === "Bomb Fruit") {
+                const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+                const proj = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff3300 }));
+                proj.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.5, 0));
+                scene.add(proj);
+
+                let ticks = 0;
+                const projInterval = setInterval(() => {
+                    ticks++;
+                    proj.position.add(dir.clone().multiplyScalar(1.2));
+
+                    let hit = false;
+                    enemies.forEach(enemy => {
+                        if (!hit && enemy.hp > 0 && enemy.mesh.position.distanceTo(proj.position) < 2.5) {
+                            hit = true;
+                            createExplosionEffect(proj.position, 2.5, 0xff4400);
+                            damageEnemy(enemy, 35);
+                        }
+                    });
+
+                    if (hit || ticks > 20) {
+                        clearInterval(projInterval);
+                        if (!hit) createExplosionEffect(proj.position, 2.0, 0xff6600);
+                        scene.remove(proj);
+                    }
+                }, 20);
+                return;
+            }
+
+            // STANDARD SLASH VISUAL
+            const fwd = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+            const attackPos = playerGroup.position.clone().add(fwd.multiplyScalar(2.0));
+
+            let slashColor = isFruitMode ? playerState.equippedFruit.color : 0xffffff;
+
+            const slashMesh = new THREE.Mesh(
+                new THREE.RingGeometry(1.2, 2.5, 16, 1, 0, Math.PI * 0.7),
+                new THREE.MeshBasicMaterial({ color: slashColor, side: THREE.DoubleSide, transparent: true, opacity: 0.95 })
+            );
+            slashMesh.position.copy(attackPos).add(new THREE.Vector3(0, 1.2, 0));
+            slashMesh.rotation.y = yaw + (playerState.punchSide ? -0.3 : 0.3);
+            slashMesh.rotation.x = Math.PI / 4;
+            slashMesh.rotation.z = playerState.punchSide ? -0.5 : 0.5;
+            scene.add(slashMesh);
+
+            const slashAnim = setInterval(() => {
+                slashMesh.scale.addScalar(0.18);
+                slashMesh.material.opacity -= 0.15;
+                if (slashMesh.material.opacity <= 0) {
+                    clearInterval(slashAnim);
+                    scene.remove(slashMesh);
+                }
+            }, 20);
+
+            enemies.forEach(enemy => {
+                if (enemy.hp > 0 && enemy.mesh.position.distanceTo(attackPos) < 3.8) {
+                    damageEnemy(enemy, 35);
+                }
+            });
+        }
+
+        // FULL VISUAL TRAIL DASH
+        function castDash() {
+            if (playerState.cdQ || playerState.energy < 15 || playerState.isDashing) return;
+            playerState.energy -= 15;
+            playerState.cdQ = true;
+            playerState.isDashing = true;
+            setTimeout(() => playerState.cdQ = false, 1000);
+
+            const moveDir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+
+            let dashTicks = 0;
+            const dashInterval = setInterval(() => {
+                dashTicks++;
+                playerGroup.position.add(moveDir.clone().multiplyScalar(1.3));
+
+                const trail = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.05, 0.25, 3.5, 8),
+                    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 })
+                );
+                trail.rotation.x = Math.PI / 2;
+                trail.rotation.y = Math.atan2(moveDir.x, moveDir.z);
+                trail.position.copy(playerGroup.position).add(new THREE.Vector3((Math.random() - 0.5) * 1.2, 1, (Math.random() - 0.5) * 1.2));
+                scene.add(trail);
+
+                setTimeout(() => scene.remove(trail), 180);
+
+                if (dashTicks >= 10) {
+                    clearInterval(dashInterval);
+                    playerState.isDashing = false;
+                }
+            }, 20);
+        }
+
+        // FULL VISUAL Z MOVE
+        function castZMove() {
+            if (playerState.cdZ || playerState.energy < 25) return;
+            playerState.energy -= 25;
+            playerState.cdZ = true;
+            setTimeout(() => playerState.cdZ = false, 2500);
+
+            const isFruitMode = (playerState.activeSlot === 2 && playerState.equippedFruit);
+
+            if (isFruitMode && playerState.equippedFruit.name === "Bomb Fruit") {
+                const dir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+                const bomb = new THREE.Mesh(new THREE.SphereGeometry(0.7, 12, 12), new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2 }));
+                bomb.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.8, 0));
+                scene.add(bomb);
+
+                let ticks = 0;
+                const bombAnim = setInterval(() => {
+                    ticks++;
+                    bomb.position.add(dir.clone().multiplyScalar(1.1));
+                    bomb.position.y -= 0.05;
+
+                    let hit = false;
+                    enemies.forEach(enemy => {
+                        if (!hit && enemy.hp > 0 && enemy.mesh.position.distanceTo(bomb.position) < 3.2) {
+                            hit = true;
+                            createExplosionEffect(bomb.position, 5.0, 0xff3300);
+                            damageEnemy(enemy, 65);
+                        }
+                    });
+
+                    if (hit || ticks >= 25 || bomb.position.y <= getFloorHeight(bomb.position.x, bomb.position.z)) {
+                        clearInterval(bombAnim);
+                        if (!hit) {
+                            createExplosionEffect(bomb.position, 5.0, 0xff3300);
+                            enemies.forEach(enemy => {
+                                if (enemy.hp > 0 && enemy.mesh.position.distanceTo(bomb.position) < 5.0) damageEnemy(enemy, 60);
+                            });
+                        }
+                        scene.remove(bomb);
+                    }
+                }, 25);
+                return;
+            }
+
+            const attackPos = playerGroup.position.clone();
+            enemies.forEach(enemy => {
+                if (enemy.hp > 0 && enemy.mesh.position.distanceTo(attackPos) < 6.0) damageEnemy(enemy, 55);
+            });
+        }
+
+        // FULL VISUAL X MOVE
+        function castXMove() {
+            if (playerState.cdX || playerState.energy < 35) return;
+            playerState.energy -= 35;
+            playerState.cdX = true;
+            setTimeout(() => playerState.cdX = false, 4000);
+
+            const isFruitMode = (playerState.activeSlot === 2 && playerState.equippedFruit);
+
+            if (isFruitMode && playerState.equippedFruit.name === "Bomb Fruit") {
+                const blastPos = playerGroup.position.clone();
+                blastPos.y = getFloorHeight(blastPos.x, blastPos.z);
+                playerState.velocityY = 22;
+                playerState.isGrounded = false;
+
+                createExplosionEffect(blastPos, 6.0, 0xff4400);
+
+                enemies.forEach(enemy => {
+                    if (enemy.hp > 0 && enemy.mesh.position.distanceTo(blastPos) < 6.5) damageEnemy(enemy, 75);
+                });
+                return;
+            }
+
+            const smashPos = playerGroup.position.clone();
+            createExplosionEffect(smashPos, 5.0);
+
+            enemies.forEach(enemy => {
+                if (enemy.hp > 0 && enemy.mesh.position.distanceTo(smashPos) < 10) damageEnemy(enemy, 75);
+            });
+        }
+
+        // FULL VISUAL C MOVE: MINES
+        function castCMove() {
+            const isFruitMode = (playerState.activeSlot === 2 && playerState.equippedFruit);
+            if (!isFruitMode || playerState.equippedFruit.name !== "Bomb Fruit") return;
+            if (playerState.cdC || playerState.energy < 40) return;
+
+            playerState.energy -= 40;
+            playerState.cdC = true;
+            setTimeout(() => playerState.cdC = false, 5000);
+
+            const fwd = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+            
+            for (let i = 1; i <= 3; i++) {
+                const minePos = playerGroup.position.clone().add(fwd.clone().multiplyScalar(i * 3));
+                minePos.y = getFloorHeight(minePos.x, minePos.z) + 0.2;
+
+                const mine = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.2, 16), new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.3 }));
+                mine.position.copy(minePos);
+                scene.add(mine);
+
+                let checkMine = setInterval(() => {
+                    let detonated = false;
+                    enemies.forEach(enemy => {
+                        if (!detonated && enemy.hp > 0 && enemy.mesh.position.distanceTo(mine.position) < 3.0) {
+                            detonated = true;
+                            createExplosionEffect(mine.position, 4.5, 0xff2200);
+                            damageEnemy(enemy, 85);
+                        }
+                    });
+
+                    if (detonated) {
+                        clearInterval(checkMine);
+                        scene.remove(mine);
+                    }
+                }, 100);
+
+                setTimeout(() => {
+                    clearInterval(checkMine);
+                    if (mine.parent) scene.remove(mine);
+                }, 10000);
+            }
+        }
+
+        // FULL VISUAL V MOVE: SELF DESTRUCT
+        function castVMove() {
+            const isFruitMode = (playerState.activeSlot === 2 && playerState.equippedFruit);
+            if (!isFruitMode || playerState.equippedFruit.name !== "Bomb Fruit") return;
+            if (playerState.cdV || playerState.energy < 60) return;
+
+            playerState.energy -= 60;
+            playerState.cdV = true;
+            setTimeout(() => playerState.cdV = false, 8000);
+
+            const centerPos = playerGroup.position.clone();
+            const chargeMesh = new THREE.Mesh(new THREE.SphereGeometry(1.5, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffa500, transparent: true, opacity: 0.6 }));
+            chargeMesh.position.copy(centerPos).add(new THREE.Vector3(0, 1.5, 0));
+            scene.add(chargeMesh);
+
+            let chargeTicks = 0;
+            const chargeAnim = setInterval(() => {
+                chargeTicks++;
+                chargeMesh.scale.addScalar(0.2);
+                chargeMesh.position.copy(playerGroup.position).add(new THREE.Vector3(0, 1.5, 0));
+
+                if (chargeTicks >= 12) {
+                    clearInterval(chargeAnim);
+                    scene.remove(chargeMesh);
+
+                    const finalBlastPos = playerGroup.position.clone();
+                    createExplosionEffect(finalBlastPos, 14.0, 0xff1100);
+
+                    enemies.forEach(enemy => {
+                        if (enemy.hp > 0 && enemy.mesh.position.distanceTo(finalBlastPos) < 18) damageEnemy(enemy, 150);
+                    });
+                }
+            }, 50);
+        }
+
+        function damageEnemy(enemy, amount) {
+            enemy.hp -= amount;
+            createDamageText(`-${amount}`, enemy.mesh.position);
+
+            if (enemy.hp <= 0) {
+                enemy.mesh.visible = false;
+                addReward(40, 80);
+                setTimeout(() => {
+                    enemy.hp = enemy.maxHp;
+                    enemy.mesh.position.set(enemy.spawnX, getFloorHeight(enemy.spawnX, enemy.spawnZ), enemy.spawnZ);
+                    enemy.mesh.visible = true;
+                }, 5000);
+            }
+        }
+
+        function damagePlayer(amount) {
+            playerState.hp = Math.max(0, playerState.hp - amount);
+            createDamageText(`-${amount}`, playerGroup.position, true);
+            updateUI();
+
+            if (playerState.hp <= 0) {
+                playerState.hp = playerState.maxHp;
+                playerGroup.position.set(0, 9, 30);
+                updateUI();
+            }
+        }
+
+        function addReward(exp, bounty) {
+            playerState.exp += exp;
+            playerState.bounty += bounty;
+            if (playerState.exp >= playerState.maxExp) {
+                playerState.level += 1;
+                playerState.exp -= playerState.maxExp;
+                playerState.maxExp = Math.floor(playerState.maxExp * 1.5);
+                playerState.maxHp += 20;
+                playerState.hp = playerState.maxHp;
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('player-name').innerText = `Pirate Lv. ${playerState.level}`;
+            document.getElementById('player-bounty').innerText = `$${playerState.bounty}`;
+            document.getElementById('health-bar').style.width = `${(playerState.hp / playerState.maxHp) * 100}%`;
+            document.getElementById('energy-bar').style.width = `${(playerState.energy / playerState.maxEnergy) * 100}%`;
+            document.getElementById('exp-bar').style.width = `${(playerState.exp / playerState.maxExp) * 100}%`;
+            document.getElementById('current-zone-name').innerText = getCurrentZoneName(playerGroup.position.x, playerGroup.position.z);
+        }
+
+        // --- GAME LOOP ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            const now = Date.now();
+
+            rotorGroup.rotation.z += delta * 1.2;
+
+            if (playerState.energy < playerState.maxEnergy) {
+                playerState.energy = Math.min(playerState.maxEnergy, playerState.energy + delta * 10);
+                updateUI();
+            }
+
+            playerState.velocityY += GRAVITY * delta;
+            playerGroup.position.y += playerState.velocityY * delta;
+
+            const floorY = getFloorHeight(playerGroup.position.x, playerGroup.position.z);
+            if (playerGroup.position.y <= floorY) {
+                playerGroup.position.y = floorY;
+                playerState.velocityY = 0;
+                playerState.isGrounded = true;
+            }
+
+            if (playerGroup.position.y < -5) {
+                damagePlayer(20);
+                playerGroup.position.set(0, 15, 0);
+            }
+
+            for (let i = worldFruits.length - 1; i >= 0; i--) {
+                const item = worldFruits[i];
+                item.mesh.rotation.y += delta * 2;
+                if (playerGroup.position.distanceTo(item.mesh.position) < 2.5) {
+                    equipFruit(item.fruit);
+                    scene.remove(item.mesh);
+                    worldFruits.splice(i, 1);
+                }
+            }
+
+            if (isLocked) {
+                const speed = 14 * delta;
+                const moveVector = new THREE.Vector3();
+
+                if (keys['KeyW']) moveVector.z -= 1;
+                if (keys['KeyS']) moveVector.z += 1;
+                if (keys['KeyA']) moveVector.x -= 1;
+                if (keys['KeyD']) moveVector.x += 1;
+
+                if (moveVector.lengthSq() > 0) {
+                    moveVector.normalize();
+                    moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+                    playerGroup.position.add(moveVector.multiplyScalar(speed));
+                }
+
+                playerGroup.rotation.y = yaw;
+
+                const cameraOffset = new THREE.Vector3(0, 5, 12);
+                cameraOffset.applyAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
+                cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+
+                camera.position.copy(playerGroup.position).add(cameraOffset);
+                camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(0, 2, 0)));
+            }
+
+            if (playerCharacter.punchProgress > 0) {
+                playerCharacter.punchProgress -= delta * 5;
+                const arm = playerCharacter.punchingArm;
+                if (arm) arm.rotation.x = -Math.sin(playerCharacter.punchProgress * Math.PI) * 1.5;
+            }
+
+            enemies.forEach(enemy => {
+                if (enemy.hp <= 0) return;
+                const distToPlayer = enemy.mesh.position.distanceTo(playerGroup.position);
+                if (distToPlayer < 25 && distToPlayer > 2.2) {
+                    const dir = playerGroup.position.clone().sub(enemy.mesh.position).normalize();
+                    enemy.mesh.position.x += dir.x * delta * 5;
+                    enemy.mesh.position.z += dir.z * delta * 5;
+                    enemy.mesh.rotation.y = Math.atan2(dir.x, dir.z);
+                }
+
+                if (distToPlayer <= 2.8 && now - enemy.lastAttack > 1500) {
+                    enemy.lastAttack = now;
+                    damagePlayer(15);
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
